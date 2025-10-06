@@ -1,4 +1,5 @@
 {
+  "name": "fluffydiscord/nette-proxy-mailer",
   "autoload": {
     "classmap": ["src/"],
     "psr-4": {
