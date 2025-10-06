@@ -1,0 +1,13 @@
+{
+  "autoload": {
+    "classmap": ["src/"],
+    "psr-4": {
+      "ProxyMailer\\": "src"
+    }
+  },
+  "require": {
+    "nette/mail": "^v2 || ^v3 || ^v4",
+    "nette/di": "^v2 || ^v3 || ^v4",
+    "tracy/tracy": "^2"
+  }
+}
