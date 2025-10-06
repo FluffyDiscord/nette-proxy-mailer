@@ -4,11 +4,11 @@ namespace ProxyMailer\Mailer;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
-use Nette\Mail\Mailer;
+use Nette\Mail\IMailer;
 use Nette\Mail\Message;
 use Tracy\Debugger;
 
-class ProxyMailer implements Mailer
+class ProxyMailer implements IMailer
 {
     private $client = null;
 
