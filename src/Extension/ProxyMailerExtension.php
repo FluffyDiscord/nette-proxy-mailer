@@ -9,6 +9,7 @@ class ProxyMailerExtension extends Nette\DI\CompilerExtension
 {
 	public $defaults = [
         'endpoint' => null,
+        'referer' => null,
         'basic_auth_user_password' => null,
 		'host' => null,
 		'port' => null,
@@ -24,6 +25,6 @@ class ProxyMailerExtension extends Nette\DI\CompilerExtension
         $config = $this->validateConfig($this->defaults);
 
 		$mailer = $builder->getDefinition('nette.mailer');
-        $mailer->setFactory(ProxyMailer::class, [$config]);
+        $mailer->setFactory(ProxyMailer::class, $config);
 	}
 }

@@ -7,8 +7,13 @@
     }
   },
   "require": {
+    "php": ">=7.1",
     "nette/mail": "^v2 || ^v3 || ^v4",
     "nette/di": "^v2 || ^v3 || ^v4",
-    "tracy/tracy": "^2"
+    "tracy/tracy": "^2",
+    "guzzlehttp/guzzle": "^6 || ^7"
+  },
+  "require-dev": {
+    "symfony/var-dumper": "^7.3"
   }
 }

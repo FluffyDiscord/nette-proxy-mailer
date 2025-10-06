@@ -2,13 +2,18 @@
 
 namespace ProxyMailer\Mailer;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\RequestOptions;
 use Nette\Mail\Mailer;
 use Nette\Mail\Message;
 use Tracy\Debugger;
 
 class ProxyMailer implements Mailer
 {
+    private $client = null;
+
     private $endpoint = null;
+    private $referer = null;
     private $basic_auth_user_password = null;
     private $host = null;
     private $port = null;
@@ -18,6 +23,7 @@ class ProxyMailer implements Mailer
 
     public function __construct(
         $endpoint,
+        $referer,
         $basic_auth_user_password = null,
         $host = null,
         $port = null,
@@ -27,6 +33,7 @@ class ProxyMailer implements Mailer
     )
     {
         $this->endpoint = $endpoint;
+        $this->referer = $referer;
         $this->basic_auth_user_password = $basic_auth_user_password;
         $this->host = $host;
         $this->port = $port;
@@ -37,11 +44,13 @@ class ProxyMailer implements Mailer
 
     function send(Message $mail): void
     {
-        $ch = curl_init();
+        $from = $mail->getFrom();
+        $from = array_keys($from);
+        $from = reset($from);
 
-        $rawPayload = [
+        $payload = [
             'subject' => $mail->getSubject(),
-            'from' => $mail->getFrom(),
+            'from' => $from,
             'to' => [],
             'html' => $mail->getBody(),
 
@@ -60,43 +69,48 @@ class ProxyMailer implements Mailer
             $matches = [];
             preg_match('/filename="(.+)"/m', $name, $matches);
 
-            $name = isset($matches[1]) ? $matches[1] : (string)$index;
+            $name = $matches[1] ?? (string)$index;
 
-            $rawPayload['attachments'][$name] = base64_encode($attachment->getBody());
+            $payload['attachments'][$name] = base64_encode($attachment->getBody());
         }
 
-        foreach (array_merge(
-            (array) $mail->getHeader('To'),
-            (array) $mail->getHeader('Cc'),
-            (array) $mail->getHeader('Bcc')
-        ) as $email => $_) {
-            $rawPayload['to'][] = $email;
+        $recipients = array_merge(
+            (array)$mail->getHeader('To'),
+            (array)$mail->getHeader('Cc'),
+            (array)$mail->getHeader('Bcc')
+        );
+        foreach ($recipients as $email => $_) {
+            $payload['to'][] = $email;
         }
 
-        $payload = json_encode($rawPayload);
+        try {
+            $this->getClient()->post('', [
+                RequestOptions::JSON => $payload,
+            ]);
+        } catch (\Throwable $throwable) {
+            if (Debugger::isEnabled()) {
+                Debugger::log($throwable->getMessage(), Debugger::ERROR);
+            }
+        }
+    }
 
-        $headers = [
-            'Content-Type: application/json',
-        ];
-        if($this->basic_auth_user_password) {
-            $headers[] = 'Authorization: Basic ' . base64_encode($this->basic_auth_user_password);
+    private function getClient()
+    {
+        if ($this->client === null) {
+            $options = [
+                'base_uri' => $this->endpoint,
+                RequestOptions::HEADERS => [
+                    'Referer' => $this->referer,
+                ],
+            ];
+
+            if ($this->basic_auth_user_password) {
+                $options[RequestOptions::AUTH] = explode(':', $this->basic_auth_user_password);
+            }
+
+            $this->client = new Client($options);
         }
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $this->endpoint,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => $headers,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-        ]);
-
-        $response = curl_exec($ch);
-
-        if (curl_errno($ch)) {
-            Debugger::log(curl_error($ch), Debugger::ERROR);
-        }
-
-        curl_close($ch);
+        return $this->client;
     }
 }
