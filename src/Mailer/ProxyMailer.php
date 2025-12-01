@@ -44,13 +44,12 @@ class ProxyMailer implements IMailer
 
     function send(Message $mail): void
     {
-        $from = $mail->getFrom();
-        $from = array_keys($from);
-        $from = reset($from);
-
         $payload = [
             'subject' => $mail->getSubject(),
-            'from' => $from,
+            'from' => [],
+            'cc' => [],
+            'bcc' => [],
+            'replyTo' => [],
             'to' => [],
             'html' => $mail->getBody(),
 
@@ -74,13 +73,39 @@ class ProxyMailer implements IMailer
             $payload['attachments'][$name] = base64_encode($attachment->getBody());
         }
 
-        $recipients = array_merge(
-            (array)$mail->getHeader('To'),
-            (array)$mail->getHeader('Cc'),
-            (array)$mail->getHeader('Bcc')
-        );
-        foreach ($recipients as $email => $_) {
-            $payload['to'][] = $email;
+        foreach ($mail->getFrom() as $email => $name) {
+            $payload['from'][] = [
+                'email' => $email,
+                'name' => $name,
+            ];
+        }
+
+        foreach ((array)$mail->getHeader('To') as $email => $name) {
+            $payload['to'][] = [
+                'email' => $email,
+                'name' => $name,
+            ];
+        }
+
+        foreach ((array)$mail->getHeader('Cc') as $email => $name) {
+            $payload['cc'][] = [
+                'email' => $email,
+                'name' => $name,
+            ];
+        }
+
+        foreach ((array)$mail->getHeader('Bcc') as $email => $name) {
+            $payload['bcc'][] = [
+                'email' => $email,
+                'name' => $name,
+            ];
+        }
+
+        foreach ((array)$mail->getHeader('Reply-To') as $email => $name) {
+            $payload['replyTo'][] = [
+                'email' => $email,
+                'name' => $name,
+            ];
         }
 
         try {
